@@ -1,116 +1,355 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Number Stack Puzzle</title>
-<style>
-  body { font-family: sans-serif; text-align:center; background:#eef; }
-  h1 { margin-top:20px; }
-  #board { display:flex; justify-content:center; gap:20px; margin:40px auto; }
-  .stack {
-    width:70px; height:200px; background:#222; border-radius:8px;
-    display:flex; flex-direction:column-reverse; justify-content:flex-start;
-    align-items:center; padding:5px; color:#fff; cursor:pointer;
-  }
-  .disk {
-    width:50px; height:25px; background:#0af; border-radius:4px; 
-    margin:2px 0; line-height:25px; font-weight:bold;
-  }
-  .selected { outline:4px solid yellow; }
-  #target { display:flex; justify-content:center; gap:20px; margin-top:30px; }
-  .targetStack {
-    width:70px; height:200px; background:#ccc; border-radius:8px;
-    display:flex; flex-direction:column-reverse; justify-content:flex-start;
-    align-items:center; padding:5px; color:#000;
-  }
-  #message { font-size:1.2em; margin-top:20px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digit Stacker Puzzle - Build the 5</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #a5e6f5;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #006064;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            max-width: 900px;
+        }
+
+        .move-counter {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            color: #006064;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            font-size: 1.1rem;
+        }
+
+        .digits-container {
+            display: flex;
+            gap: 60px;
+            align-items: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .digit-wrapper {
+            text-align: center;
+        }
+
+        .digit-label {
+            margin-top: 12px;
+            font-weight: bold;
+            color: #006064;
+            font-size: 1.1rem;
+        }
+
+        .digit-box {
+            width: 130px;
+            height: 230px;
+            background: white;
+            border-radius: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        svg {
+            width: 100px;
+            height: 200px;
+        }
+
+        .segment {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .segment polygon {
+            fill: #000000;
+            stroke: #111;
+            stroke-width: 1;
+        }
+
+        .segment text {
+            fill: #ffffff;
+            font-size: 20px;
+            font-weight: bold;
+            pointer-events: none;
+            text-anchor: middle;
+            dominant-baseline: central;
+            text-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+
+        .segment:hover polygon {
+            fill: #222222;
+        }
+
+        .segment.selected polygon {
+            fill: #00bcd4;
+            stroke: #00acc1;
+            stroke-width: 2;
+        }
+
+        .segment.selected text {
+            fill: #ffffff;
+        }
+
+        .reset-btn {
+            background: #ff5722;
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(255, 87, 34, 0.3);
+        }
+
+        .reset-btn:hover {
+            background: #e64a19;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(255, 87, 34, 0.4);
+        }
+
+        .reset-btn:active {
+            transform: translateY(0);
+        }
+
+        .win-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.88);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .win-message.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .win-message h2 {
+            margin: 0 0 20px 0;
+            font-size: 4rem;
+            color: #4caf50;
+            text-shadow: 0 0 25px rgba(76, 175, 80, 0.6);
+        }
+
+        .win-message p {
+            margin: 8px 0;
+            font-size: 1.4rem;
+        }
+
+        .win-message button {
+            margin-top: 35px;
+            font-size: 1.4rem;
+            padding: 16px 40px;
+            background: #4caf50;
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
+    <div class="game-container">
+        <div class="move-counter">Moves: <span id="moveCount">0</span></div>
 
-<h1>🧮 Number Stack Puzzle</h1>
-<p>Goal: Rearrange the stacks from the "8" shape to match the target "5".<br>
-Click a stack to <b>pick up</b> the top piece, then click another to <b>drop</b> it.</p>
+        <div class="digits-container">
+            <div class="digit-wrapper">
+                <div class="digit-box">
+                    <svg id="targetSvg" viewBox="0 0 100 200"></svg>
+                </div>
+                <div class="digit-label">Target: 5</div>
+            </div>
+            <div class="digit-wrapper">
+                <div class="digit-box">
+                    <svg id="currentSvg" viewBox="0 0 100 200"></svg>
+                </div>
+                <div class="digit-label">Current</div>
+            </div>
+        </div>
 
-<div id="board"></div>
+        <button id="resetBtn" class="reset-btn">Reset Game</button>
+    </div>
 
-<h2>Target (Number 5)</h2>
-<div id="target"></div>
+    <div class="win-message" id="winMessage">
+        <h2>Congratulations! You Win!</h2>
+        <p>You've built the perfect 5!</p>
+        <p>Moves: <strong id="finalMoves">0</strong></p>
+        <button id="playAgainBtn">Play Again</button>
+    </div>
 
-<div id="message"></div>
+    <script>
+        // Segment definitions
+        const segments = [
+            {id: 0, type: 'h', t: 'translate(20, 15)',   tx: 35, ty: 10},  // a - top
+            {id: 1, type: 'v', t: 'translate(70, 25)',   tx: 8,  ty: 35},  // b - top-right
+            {id: 2, type: 'v', t: 'translate(70, 115)',  tx: 8,  ty: 35},  // c - bottom-right
+            {id: 3, type: 'h', t: 'translate(20, 175)',  tx: 35, ty: 10},  // d - bottom
+            {id: 4, type: 'v', t: 'translate(10, 115)',  tx: 8,  ty: 35},  // e - bottom-left
+            {id: 5, type: 'v', t: 'translate(10, 25)',   tx: 8,  ty: 35},  // f - top-left
+            {id: 6, type: 'h', t: 'translate(20, 95)',   tx: 35, ty: 10}   // g - middle
+        ];
 
-<script>
-/* ---------- GAME STATE ---------- */
-const startConfig = [ [1], [1,2], [1], [2,1], [1] ];  // roughly "8"
-const targetConfig = [ [2], [1,3], [3], [1], [2] ];   // "5" example
-let stacks = JSON.parse(JSON.stringify(startConfig));
-let holding = null;   // holds picked disk
-let fromStack = null;
+        const hPoints = '0,0 50,0 55,5 50,10 0,10 -5,5';
+        const vPoints = '0,0 5,-5 10,0 10,60 5,65 0,60';
 
-/* ---------- DOM SETUP ---------- */
-const board = document.getElementById('board');
-const targetDiv = document.getElementById('target');
-const msg = document.getElementById('message');
+        // Target: number 5
+        const targetStacks = [3, 0, 1, 3, 0, 2, 1];
 
-function render() {
-  board.innerHTML = '';
-  stacks.forEach((stack, i) => {
-    const sDiv = document.createElement('div');
-    sDiv.className = 'stack';
-    sDiv.dataset.index = i;
-    stack.forEach(v => {
-      const d = document.createElement('div');
-      d.className = 'disk';
-      d.textContent = v;
-      sDiv.appendChild(d);
-    });
-    if (i === fromStack) sDiv.classList.add('selected');
-    sDiv.addEventListener('click', () => handleClick(i));
-    board.appendChild(sDiv);
-  });
-}
+        // Different initial state (not yet solved)
+        const initialStacks = [1, 3, 0, 2, 3, 0, 1];
 
-function renderTarget() {
-  targetDiv.innerHTML = '';
-  targetConfig.forEach(stack => {
-    const sDiv = document.createElement('div');
-    sDiv.className = 'targetStack';
-    stack.forEach(v => {
-      const d = document.createElement('div');
-      d.className = 'disk';
-      d.textContent = v;
-      sDiv.appendChild(d);
-    });
-    targetDiv.appendChild(sDiv);
-  });
-}
+        let stacks = [];
+        let selectedSegment = null;
+        let moveCount = 0;
 
-/* ---------- LOGIC ---------- */
-function handleClick(i) {
-  if (holding === null) {
-    // pick up
-    if (stacks[i].length === 0) return;
-    holding = stacks[i].pop();
-    fromStack = i;
-  } else {
-    // drop
-    stacks[i].push(holding);
-    holding = null;
-    fromStack = null;
-    checkWin();
-  }
-  render();
-}
+        function initGame() {
+            stacks = [...initialStacks];
+            selectedSegment = null;
+            moveCount = 0;
+            updateMoveCounter();
+            renderTargetSvg();
+            renderCurrentSvg();
+            hideWinMessage();
+        }
 
-function checkWin() {
-  const equal = JSON.stringify(stacks) === JSON.stringify(targetConfig);
-  if (equal) msg.textContent = '✅ You made the number 5! Well done!';
-  else msg.textContent = '';
-}
+        function createSegmentGroup(seg, count, isTarget = false) {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.classList.add('segment');
+            if (!isTarget) g.dataset.index = seg.id;
+            g.setAttribute('transform', seg.t);
 
-/* ---------- INIT ---------- */
-render();
-renderTarget();
-</script>
+            if (count === 0) {
+                g.style.display = 'none';
+                return g;
+            }
+
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygon.setAttribute('points', seg.type === 'h' ? hPoints : vPoints);
+            g.appendChild(polygon);
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', seg.tx);
+            text.setAttribute('y', seg.ty);
+            text.textContent = count;
+            g.appendChild(text);
+
+            if (!isTarget && count > 0) {
+                g.addEventListener('click', () => handleSegmentClick(seg.id));
+            }
+
+            return g;
+        }
+
+        function renderTargetSvg() {
+            const svg = document.getElementById('targetSvg');
+            svg.innerHTML = '';
+            segments.forEach((seg, i) => {
+                if (targetStacks[i] > 0) {
+                    svg.appendChild(createSegmentGroup(seg, targetStacks[i], true));
+                }
+            });
+        }
+
+        function renderCurrentSvg() {
+            const svg = document.getElementById('currentSvg');
+            svg.innerHTML = '';
+            segments.forEach((seg, i) => {
+                const g = createSegmentGroup(seg, stacks[i], false);
+                if (selectedSegment === i) g.classList.add('selected');
+                svg.appendChild(g);
+            });
+        }
+
+        function handleSegmentClick(index) {
+            const count = stacks[index];
+            if (selectedSegment === null) {
+                if (count > 0) selectSegment(index);
+            } else {
+                if (selectedSegment === index) {
+                    deselectSegment();
+                } else {
+                    moveBlock(selectedSegment, index);
+                }
+            }
+        }
+
+        function selectSegment(index) {
+            deselectSegment();
+            selectedSegment = index;
+            renderCurrentSvg();
+        }
+
+        function deselectSegment() {
+            selectedSegment = null;
+            renderCurrentSvg();
+        }
+
+        function moveBlock(fromIdx, toIdx) {
+            if (stacks[fromIdx] === 0) return;
+            stacks[fromIdx]--;
+            stacks[toIdx]++;
+            moveCount++;
+            updateMoveCounter();
+            renderCurrentSvg();
+            deselectSegment();
+            checkWin();
+        }
+
+        function updateMoveCounter() {
+            document.getElementById('moveCount').textContent = moveCount;
+        }
+
+        function checkWin() {
+            if (stacks.every((c, i) => c === targetStacks[i])) {
+                setTimeout(showWinMessage, 500);
+            }
+        }
+
+        function showWinMessage() {
+            document.getElementById('finalMoves').textContent = moveCount;
+            document.getElementById('winMessage').classList.add('show');
+        }
+
+        function hideWinMessage() {
+            document.getElementById('winMessage').classList.remove('show');
+        }
+
+        document.getElementById('resetBtn').addEventListener('click', initGame);
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            hideWinMessage();
+            initGame();
+        });
+
+        window.addEventListener('load', initGame);
+    </script>
 </body>
 </html>
